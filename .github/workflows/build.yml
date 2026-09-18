@@ -31,13 +31,10 @@ jobs:
       - name: Locate project root (folder containing gradle.properties)
         id: find_root
         run: |
-          # Tim file gradle.properties o bat ky dau trong repo (ke ca sau khi giai nen zip),
-          # loai tru thu muc .git, roi lay thu muc chua no lam project root.
           GRADLE_PROPS=$(find . -name "gradle.properties" -not -path "*/.git/*" | head -n 1)
 
           if [ -z "$GRADLE_PROPS" ]; then
             echo "ERROR: Khong tim thay gradle.properties o bat ky dau trong repo."
-            echo "Kiem tra lai cau truc thu muc da push len GitHub."
             find . -maxdepth 3 -not -path "*/.git/*"
             exit 1
           fi
@@ -83,7 +80,7 @@ jobs:
         working-directory: ${{ steps.find_root.outputs.root }}
         run: |
           if [ ! -f gradlew ]; then
-            gradle wrapper --gradle-version 8.10
+            gradle wrapper --gradle-version 8.14
           fi
           chmod +x gradlew
 
