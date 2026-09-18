@@ -1,0 +1,77 @@
+name: Build MapArt Mod
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Resolve exact Yarn mappings build for this Minecraft version
+        run: |
+          MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2)
+          echo "Minecraft version: $MC_VERSION"
+
+          YARN_VERSION=$(curl -s "https://meta.fabricmc.net/v2/versions/yarn/${MC_VERSION}" | \
+            python3 -c "import sys, json; data = json.load(sys.stdin); print(data[0]['version']) if data else exit(1)")
+
+          if [ -z "$YARN_VERSION" ]; then
+            echo "ERROR: Khong tim thay yarn mapping cho Minecraft $MC_VERSION"
+            exit 1
+          fi
+
+          echo "Resolved yarn version: $YARN_VERSION"
+          sed -i "s/^yarn_mappings=.*/yarn_mappings=${YARN_VERSION}/" gradle.properties
+          echo "--- gradle.properties sau khi cap nhat ---"
+          cat gradle.properties
+
+      - name: Grant execute permission for gradlew
+        run: |
+          if [ ! -f gradlew ]; then
+            echo "gradlew khong ton tai, se dung 'gradle wrapper' de tao truoc."
+          fi
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Gradle wrapper (if missing)
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.10
+          fi
+          chmod +x gradlew
+
+      - name: Build mod
+        run: ./gradlew build --stacktrace --no-daemon
+
+      - name: Locate built jar
+        id: locate
+        run: |
+          JAR_PATH=$(find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" ! -name "*-dev.jar" | head -n 1)
+          echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
+          echo "Built jar: $JAR_PATH"
+
+      - name: Upload built mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapart-builder-mod
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+          
