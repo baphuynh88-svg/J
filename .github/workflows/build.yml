@@ -80,7 +80,7 @@ jobs:
         working-directory: ${{ steps.find_root.outputs.root }}
         run: |
           if [ ! -f gradlew ]; then
-            gradle wrapper --gradle-version 8.14
+            gradle wrapper --gradle-version 9.2.0
           fi
           chmod +x gradlew
 
